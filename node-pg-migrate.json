@@ -1,0 +1,7 @@
+{
+  "tsconfig": "tsconfig.json",
+  "migration-filename-format": "utc",
+  "template-file-name": "migrations/template.ts",
+  "ignore-pattern": "template.ts",
+  "decamelize": true
+}

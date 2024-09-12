@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - backend
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+
+  app:
+    build:
+      dockerfile: Dockerfile
+      target: base
+    volumes:
+      - ./:/app
+    networks:
+      - backend
+    depends_on:
+      - db
+      - traefik
+    deploy:
+      replicas: 1
+    environment:
+      - PGHOST=${DB_HOST}
+      - PGUSER=${DB_USER}
+      - PGDATABASE=${DB_NAME}
+      - PGPASSWORD=${DB_PASSWORD}
+      - PGPORT=${DB_PORT}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.api.entrypoints=api"
+      - "traefik.http.services.api.loadbalancer.server.port=3000"
+
+  adminer:
+    image: adminer:latest
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.adminer.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.adminer.entrypoints=adminer"
+      - "traefik.http.services.adminer.loadbalancer.server.port=8080"
+    depends_on:
+      - db
+    networks:
+      - backend
+
+  traefik:
+    image: "traefik:v2.4"
+    command:
+      - "--log.level=WARNING"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.adminer.address=:8888"
+    ports:
+      - "8888:8888"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+      - backend
+
+networks:
+  backend:
+
+volumes:
+  db-data:
